@@ -65,7 +65,6 @@
             align-items: center;
             justify-content: center;
             z-index: 1000;
-            transition: opacity 0.3s ease;
         }
         .modal-content {
             background-color: white;
@@ -74,18 +73,25 @@
             width: 90%;
             max-width: 500px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            transform: scale(0.95);
-            transition: all 0.3s ease;
         }
-        .modal-overlay:not(.hidden) .modal-content {
-             transform: scale(1);
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
         }
         .loading-spinner {
-            border: 4px solid #f3f3f3; /* Light grey */
-            border-top: 4px solid #d97706; /* Amber 600 */
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #d97706;
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
+            width: 50px;
+            height: 50px;
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
@@ -96,31 +102,34 @@
 </head>
 <body class="text-zinc-800">
 
-    <div class="container mx-auto p-4 md:p-8">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
 
+    <div class="container mx-auto p-4 md:p-8">
+        
         <header class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold text-zinc-900">Dasbor Kalender Kegiatan</h1>
             <p class="mt-2 text-lg text-zinc-600">PK IPNU IPPNU UIN Kiai Haji Achmad Siddiq Jember | Masa Khidmat 2025 - 2026</p>
+            <p id="user-id-display" class="mt-2 text-xs text-zinc-500"></p>
         </header>
 
         <main>
             <!-- Panel Kontrol -->
             <section id="controls" class="mb-8 p-6 bg-white rounded-xl shadow-md">
                 <h2 class="text-xl font-semibold mb-4 text-zinc-800">Panel Kontrol & Filter</h2>
-                <div class="flex flex-wrap items-center gap-4">
-                    <label for="pj-filter" class="font-medium text-zinc-700 sr-only md:not-sr-only">Filter PJ:</label>
+                <div class="flex flex-col md:flex-row items-center gap-4">
+                    <label for="pj-filter" class="font-medium text-zinc-700">Filter berdasarkan PJ:</label>
                     <select id="pj-filter" class="w-full md:w-auto flex-grow p-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
                         <option value="all">Tampilkan Semua Departemen</option>
                     </select>
-                    <button id="add-activity-btn" class="w-full sm:w-auto bg-amber-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-amber-600 transition-colors">
-                        + Tambah Kegiatan
-                    </button>
-                    <button id="summarize-month-btn" class="w-full sm:w-auto bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                        ✨ Rangkum Bulan Ini
+                    <button id="add-activity-btn" class="w-full md:w-auto bg-amber-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-amber-600 transition-colors">
+                        + Tambah Acara Baru
                     </button>
                 </div>
             </section>
-
+            
             <!-- Visualisasi Kalender -->
             <section id="calendar-visualization" class="mb-8 p-6 bg-white rounded-xl shadow-md">
                 <div id="calendar-header" class="flex justify-between items-center mb-4">
@@ -133,6 +142,7 @@
 
             <!-- Grid Utama -->
             <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                
                 <section id="activity-timeline" class="lg:col-span-3 p-6 bg-white rounded-xl shadow-md">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-semibold text-zinc-800">Linimasa Kegiatan</h2>
@@ -140,126 +150,70 @@
                     </div>
                     <div id="activity-list" class="space-y-6 max-h-[800px] overflow-y-auto pr-2"></div>
                 </section>
+
                 <aside class="lg:col-span-2 space-y-8">
-                    <section class="p-6 bg-white rounded-xl shadow-md"><h2 class="text-xl font-semibold mb-4 text-zinc-800">Kegiatan per PJ</h2><div class="chart-container h-[450px]"><canvas id="pjChart"></canvas></div></section>
-                    <section class="p-6 bg-white rounded-xl shadow-md"><h2 class="text-xl font-semibold mb-4 text-zinc-800">Kegiatan per Bulan</h2><div class="chart-container h-96"><canvas id="monthChart"></canvas></div></section>
+                    <section class="p-6 bg-white rounded-xl shadow-md">
+                        <h2 class="text-xl font-semibold mb-4 text-zinc-800">Kegiatan per PJ</h2>
+                        <div class="chart-container h-[450px]"><canvas id="pjChart"></canvas></div>
+                    </section>
+                    <section class="p-6 bg-white rounded-xl shadow-md">
+                        <h2 class="text-xl font-semibold mb-4 text-zinc-800">Kegiatan per Bulan</h2>
+                        <div class="chart-container h-96"><canvas id="monthChart"></canvas></div>
+                    </section>
                 </aside>
             </div>
         </main>
     </div>
 
     <!-- Modal untuk Tambah/Edit Kegiatan -->
-    <div id="activity-modal" class="modal-overlay hidden"><div class="modal-content">
-        <h3 id="modal-title" class="text-2xl font-bold mb-6">Tambah Kegiatan Baru</h3>
-        <form id="activity-form">
-            <input type="hidden" id="activity-id">
-            <div class="mb-4">
-                <label for="kegiatan" class="block text-zinc-700 font-semibold mb-2">Nama Kegiatan</label>
-                <div class="flex gap-2">
+    <div id="activity-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 id="modal-title" class="text-2xl font-bold mb-6">Tambah Kegiatan Baru</h3>
+            <form id="activity-form">
+                <input type="hidden" id="activity-id">
+                <div class="mb-4">
+                    <label for="kegiatan" class="block text-zinc-700 font-semibold mb-2">Nama Kegiatan</label>
                     <input type="text" id="kegiatan" class="w-full p-2 border border-zinc-300 rounded-lg" required>
-                    <button type="button" id="generate-desc-btn" class="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200" title="Buat deskripsi otomatis dengan AI">✨</button>
                 </div>
-            </div>
-            <div class="mb-4">
-                <label for="deskripsi" class="block text-zinc-700 font-semibold mb-2">Deskripsi</label>
-                <textarea id="deskripsi" rows="4" class="w-full p-2 border border-zinc-300 rounded-lg" placeholder="Deskripsi singkat kegiatan..."></textarea>
-                <div id="desc-loader" class="hidden mt-2"><div class="loading-spinner"></div></div>
-            </div>
-            <div class="mb-4"><label for="tanggal" class="block text-zinc-700 font-semibold mb-2">Tanggal</label><input type="date" id="tanggal" class="w-full p-2 border border-zinc-300 rounded-lg" required></div>
-            <div class="mb-6"><label for="pj" class="block text-zinc-700 font-semibold mb-2">Penanggung Jawab (PJ)</label><input type="text" id="pj" class="w-full p-2 border border-zinc-300 rounded-lg" list="pj-datalist" required><datalist id="pj-datalist"></datalist></div>
-            <div class="flex justify-end gap-4"><button type="button" id="cancel-btn" class="px-4 py-2 bg-zinc-200 rounded-lg hover:bg-zinc-300">Batal</button><button type="submit" class="px-4 py-2 bg-amber-500 text-white font-semibold rounded-lg hover:bg-amber-600">Simpan</button></div>
-        </form>
-    </div></div>
-
-    <!-- Modal untuk Ringkasan -->
-    <div id="summary-modal" class="modal-overlay hidden"><div class="modal-content">
-        <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">✨ Ringkasan Bulan Ini</h3>
-        <div id="summary-content" class="text-zinc-600 prose max-w-none mb-6 min-h-[100px]"></div>
-        <div class="flex justify-end gap-4">
-            <button type="button" id="copy-summary-btn" class="px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 hidden">Salin</button>
-            <button type="button" id="close-summary-btn" class="px-4 py-2 bg-zinc-200 rounded-lg hover:bg-zinc-300">Tutup</button>
+                 <div class="mb-4">
+                    <label for="deskripsi" class="block text-zinc-700 font-semibold mb-2">Deskripsi</label>
+                    <textarea id="deskripsi" rows="3" class="w-full p-2 border border-zinc-300 rounded-lg" placeholder="Deskripsi singkat kegiatan..."></textarea>
+                </div>
+                <div class="mb-4">
+                    <label for="tanggal" class="block text-zinc-700 font-semibold mb-2">Tanggal</label>
+                    <input type="date" id="tanggal" class="w-full p-2 border border-zinc-300 rounded-lg" required>
+                </div>
+                <div class="mb-6">
+                    <label for="pj" class="block text-zinc-700 font-semibold mb-2">Penanggung Jawab (PJ)</label>
+                    <input type="text" id="pj" class="w-full p-2 border border-zinc-300 rounded-lg" list="pj-datalist" required>
+                    <datalist id="pj-datalist"></datalist>
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="button" id="cancel-btn" class="px-4 py-2 bg-zinc-200 rounded-lg hover:bg-zinc-300">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-amber-500 text-white font-semibold rounded-lg hover:bg-amber-600">Simpan</button>
+                </div>
+            </form>
         </div>
-    </div></div>
+    </div>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // --- DATA ---
-        let activityData = [
-                { id: 1, kegiatan: "Monev", tanggal: "2025-05-05", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "" },
-                { id: 2, kegiatan: "Rutinan Tahlil", tanggal: "2025-05-05", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 3, kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2025-05-05", pj: "LEMBAGA CBP DAN KPP", deskripsi: "" },
-                { id: 4, kegiatan: "Monev", tanggal: "2025-06-02", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "" },
-                { id: 5, kegiatan: "Budaya (Pelatihan hadrah/banjari)", tanggal: "2025-06-02", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 6, kegiatan: "Olahraga (bulu tangkis dan futsal)", tanggal: "2025-06-02", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 7, kegiatan: "Keilmuan (pelatihan MC, tilawah, kaligrafi dan kepenulisan)", tanggal: "2025-06-02", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 8, kegiatan: "Rutinan Tahlil", tanggal: "2025-06-02", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 9, kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2025-06-02", pj: "LEMBAGA CBP DAN KPP", deskripsi: "" },
-                { id: 10, kegiatan: "Monev", tanggal: "2025-07-07", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "" },
-                { id: 11, kegiatan: "Budaya (Pelatihan hadrah/banjari)", tanggal: "2025-07-07", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 12, kegiatan: "Olahraga (bulu tangkis dan futsal)", tanggal: "2025-07-07", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 13, kegiatan: "Keilmuan (pelatihan MC, tilawah, kaligrafi dan kepenulisan)", tanggal: "2025-07-07", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 14, kegiatan: "Rutinan Tahlil", tanggal: "2025-07-07", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 15, kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2025-07-07", pj: "LEMBAGA CBP DAN KPP", deskripsi: "" },
-                { id: 16, kegiatan: "Monev", tanggal: "2025-08-04", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "" },
-                { id: 17, kegiatan: "Budaya (Pelatihan hadrah/banjari)", tanggal: "2025-08-04", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 18, kegiatan: "Olahraga (bulu tangkis dan futsal)", tanggal: "2025-08-04", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 19, kegiatan: "Keilmuan (pelatihan MC, tilawah, kaligrafi dan kepenulisan)", tanggal: "2025-08-04", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 20, kegiatan: "Rutinan Tahlil", tanggal: "2025-08-04", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 21, kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2025-08-04", pj: "LEMBAGA CBP DAN KPP", deskripsi: "" },
-                { id: 22, kegiatan: "Monev", tanggal: "2025-09-01", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "" },
-                { id: 23, kegiatan: "Budaya (Pelatihan hadrah/banjari)", tanggal: "2025-09-01", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 24, kegiatan: "Olahraga (bulu tangkis dan futsal)", tanggal: "2025-09-01", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 25, kegiatan: "Keilmuan (pelatihan MC, tilawah, kaligrafi dan kepenulisan)", tanggal: "2025-09-01", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 26, kegiatan: "LINDIS (Lingkar Diskusi)", tanggal: "2025-09-01", pj: "DEPARTEMEN KADERISASI dan Departemen Penguatan Amaliah dan Pendidikan Aswaja", deskripsi: "" },
-                { id: 27, kegiatan: "Rutinan Tahlil", tanggal: "2025-09-01", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 28, kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2025-09-01", pj: "LEMBAGA CBP DAN KPP", deskripsi: "" },
-                { id: 29, kegiatan: "Monev", tanggal: "2025-10-06", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "" },
-                { id: 30, kegiatan: "Budaya (Pelatihan hadrah/banjari)", tanggal: "2025-10-06", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 31, kegiatan: "Olahraga (bulu tangkis dan futsal)", tanggal: "2025-10-06", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 32, kegiatan: "Keilmuan (pelatihan MC, tilawah, kaligrafi dan kepenulisan)", tanggal: "2025-10-06", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 33, kegiatan: "MAKESTA", tanggal: "2025-10-06", pj: "DEPARTEMEN KADERISASI dan Departemen Penguatan Amaliah dan Pendidikan Aswaja", deskripsi: "" },
-                { id: 34, kegiatan: "Rutinan Tahlil", tanggal: "2025-10-06", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 35, kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2025-10-06", pj: "LEMBAGA CBP DAN KPP", deskripsi: "" },
-                { id: 36, kegiatan: "Monev", tanggal: "2025-11-03", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "" },
-                { id: 37, kegiatan: "SUARASA", tanggal: "2025-11-03", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "" },
-                { id: 38, kegiatan: "Budaya (Pelatihan hadrah/banjari)", tanggal: "2025-11-03", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 39, kegiatan: "Olahraga (bulu tangkis dan futsal)", tanggal: "2025-11-03", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 40, kegiatan: "Keilmuan (pelatihan MC, tilawah, kaligrafi dan kepenulisan)", tanggal: "2025-11-03", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 41, kegiatan: "Seminar Kewirausahaan", tanggal: "2025-11-03", pj: "LEKAS dan Departemen Pengembangan Kretivitas, Ketrampilan dan Kewirausahaan", deskripsi: "" },
-                { id: 42, kegiatan: "Rutinan Tahlil", tanggal: "2025-11-03", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 43, kegiatan: "Workshop Video Editing", tanggal: "2025-11-03", pj: "LPP dan Departemen MEDIGSI", deskripsi: "" },
-                { id: 44, kegiatan: "Lomba Video", tanggal: "2025-11-03", pj: "LPP dan Departemen MEDIGSI", deskripsi: "" },
-                { id: 45, kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2025-11-03", pj: "LEMBAGA CBP DAN KPP", deskripsi: "" },
-                { id: 46, kegiatan: "Monev", tanggal: "2025-12-01", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "" },
-                { id: 47, kegiatan: "Budaya (Pelatihan hadrah/banjari)", tanggal: "2025-12-01", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 48, kegiatan: "Olahraga (bulu tangkis dan futsal)", tanggal: "2025-12-01", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 49, kegiatan: "Keilmuan (pelatihan MC, tilawah, kaligrafi dan kepenulisan)", tanggal: "2025-12-01", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 50, kegiatan: "MALTAKOM", tanggal: "2025-12-01", pj: "DEPARTEMEN KADERISASI dan Departemen Penguatan Amaliah dan Pendidikan Aswaja", deskripsi: "" },
-                { id: 51, kegiatan: "Ziarah wali 5", tanggal: "2025-12-01", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 52, kegiatan: "Rutinan Tahlil", tanggal: "2025-12-01", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 53, kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2025-12-01", pj: "LEMBAGA CBP DAN KPP", deskripsi: "" },
-                { id: 54, kegiatan: "DIKLATAMA", tanggal: "2025-12-01", pj: "LEMBAGA CBP DAN KPP", deskripsi: "" },
-                { id: 55, kegiatan: "Monev", tanggal: "2026-01-05", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "" },
-                { id: 56, kegiatan: "Budaya (Pelatihan hadrah/banjari)", tanggal: "2026-01-05", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 57, kegiatan: "Olahraga (bulu tangkis dan futsal)", tanggal: "2026-01-05", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 58, kegiatan: "Keilmuan (pelatihan MC, tilawah, kaligrafi dan kepenulisan)", tanggal: "2026-01-05", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 59, kegiatan: "Rutinan Tahlil", tanggal: "2026-01-05", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 60, kegiatan: "Bulletin", tanggal: "2026-01-05", pj: "LPP dan Departemen MEDIGSI", deskripsi: "" },
-                { id: 61, kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2026-01-05", pj: "LEMBAGA CBP DAN KPP", deskripsi: "" },
-                { id: 62, kegiatan: "Monev", tanggal: "2026-02-02", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "" },
-                { id: 63, kegiatan: "Budaya (Pelatihan hadrah/banjari)", tanggal: "2026-02-02", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 64, kegiatan: "Olahraga (bulu tangkis dan futsal)", tanggal: "2026-02-02", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 65, kegiatan: "Keilmuan (pelatihan MC, tilawah, kaligrafi dan kepenulisan)", tanggal: "2026-02-02", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 66, kegiatan: "Rutinan Tahlil", tanggal: "2026-02-02", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 67, kegiatan: "RAPTA", tanggal: "2026-02-02", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "" },
-                { id: 68, kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2026-02-02", pj: "LEMBAGA CBP DAN KPP", deskripsi: "" },
-                { id: 69, kegiatan: "Monev", tanggal: "2026-03-02", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "" },
-                { id: 70, kegiatan: "Budaya (Pelatihan hadrah/banjari)", tanggal: "2026-03-02", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 71, kegiatan: "Olahraga (bulu tangkis dan futsal)", tanggal: "2026-03-02", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 72, kegiatan: "Rutinan Tahlil", tanggal: "2026-03-02", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "" },
-                { id: 73, kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2026-03-02", pj: "LEMBAGA CBP DAN KPP", deskripsi: "" },
-        ];
-        // --- DOM ELEMENTS ---
+    <script type="module">
+        // Import fungsi-fungsi Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // --- KONFIGURASI FIREBASE ---
+        // Variabel ini akan disediakan oleh lingkungan Canvas
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        // Inisialisasi Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // --- ELEMEN DOM & STATE ---
+        const loadingOverlay = document.getElementById('loading-overlay');
         const pjFilter = document.getElementById('pj-filter');
         const activityListContainer = document.getElementById('activity-list');
         const resetFilterBtn = document.getElementById('reset-filter-btn');
@@ -267,10 +221,7 @@
         const currentMonthYearEl = document.getElementById('current-month-year');
         const prevMonthBtn = document.getElementById('prev-month-btn');
         const nextMonthBtn = document.getElementById('next-month-btn');
-        const addActivityBtn = document.getElementById('add-activity-btn');
-        const summarizeMonthBtn = document.getElementById('summarize-month-btn');
-        // Activity Modal
-        const activityModal = document.getElementById('activity-modal');
+        const modal = document.getElementById('activity-modal');
         const modalTitle = document.getElementById('modal-title');
         const activityForm = document.getElementById('activity-form');
         const activityIdInput = document.getElementById('activity-id');
@@ -279,54 +230,56 @@
         const tanggalInput = document.getElementById('tanggal');
         const pjInput = document.getElementById('pj');
         const pjDatalist = document.getElementById('pj-datalist');
+        const addActivityBtn = document.getElementById('add-activity-btn');
         const cancelBtn = document.getElementById('cancel-btn');
-        const generateDescBtn = document.getElementById('generate-desc-btn');
-        const descLoader = document.getElementById('desc-loader');
-        // Summary Modal
-        const summaryModal = document.getElementById('summary-modal');
-        const summaryContent = document.getElementById('summary-content');
-        const copySummaryBtn = document.getElementById('copy-summary-btn');
-        const closeSummaryBtn = document.getElementById('close-summary-btn');
-        // --- STATE & CHARTS ---
+        const userIdDisplay = document.getElementById('user-id-display');
+
+        let activityData = []; // Data akan diisi dari Firestore
+        let activityCollectionRef; // Referensi koleksi Firestore
         let pjChartInstance, monthChartInstance;
         let currentDate = new Date('2025-05-01');
         let eventsByDate = {};
         let currentFilter = { type: 'all' };
+        let unsubscribe = null; // Untuk listener onSnapshot
 
-        // --- GEMINI API FUNCTION ---
-        async function callGemini(prompt) {
-            const apiKey = ""; // API key is handled by the environment
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        // --- FUNGSI UTAMA ---
 
-            const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
-            };
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.statusText}`);
+        /**
+         * Fungsi utama yang dijalankan setelah user terautentikasi.
+         */
+        async function main(user) {
+            const userId = user.uid;
+            userIdDisplay.textContent = `User ID: ${userId}`;
+            activityCollectionRef = collection(db, 'artifacts', appId, 'users', userId, 'kegiatan');
+
+            // Hapus listener lama jika ada
+            if (unsubscribe) unsubscribe();
+
+            // Setup listener onSnapshot untuk data real-time
+            unsubscribe = onSnapshot(activityCollectionRef, async (snapshot) => {
+                // Cek apakah koleksi kosong dan perlu diisi data awal
+                if (snapshot.empty) {
+                    await seedInitialData();
+                    // Tidak perlu render di sini, onSnapshot akan dipicu lagi setelah seeding
+                    return;
                 }
-                const result = await response.json();
-                if (result.candidates && result.candidates.length > 0) {
-                   return result.candidates[0].content.parts[0].text;
-                }
-                return "Tidak ada respons dari AI. Coba lagi.";
-            } catch (error) {
-                console.error("Error calling Gemini API:", error);
-                return "Gagal menghubungi AI. Periksa koneksi internet atau coba beberapa saat lagi.";
-            }
+                
+                activityData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                rerenderDashboard();
+                loadingOverlay.classList.add('hidden');
+            });
         }
 
-        // --- RENDER & UPDATE FUNCTIONS ---
+        /**
+         * Merender ulang seluruh dasbor.
+         */
         function rerenderDashboard() {
+            if (!activityData) return;
             activityData.sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
             preprocessEventData();
             updatePjDatalist();
             populatePjFilter();
+            
             let filteredData;
             if (currentFilter.type === 'pj') {
                 filteredData = currentFilter.value === 'all' ? activityData : activityData.filter(a => a.pj === currentFilter.value);
@@ -335,48 +288,58 @@
             } else {
                 filteredData = activityData;
             }
+
             renderCalendar();
             renderActivityList(filteredData);
             createPjChart(activityData);
             createMonthChart(activityData);
+
             if (currentFilter.type === 'pj') {
                 pjFilter.value = currentFilter.value;
             } else {
                  pjFilter.value = 'all';
             }
         }
-        function preprocessEventData() {
-            eventsByDate = activityData.reduce((acc, activity) => {
-                const dateStr = activity.tanggal;
-                if (!acc[dateStr]) acc[dateStr] = [];
-                acc[dateStr].push(activity.kegiatan);
-                return acc;
-            }, {});
+        
+        // --- FUNGSI TAMPILAN (RENDER) ---
+
+        function preprocessEventData() { 
+            eventsByDate = activityData.reduce((acc, act) => { 
+                const dateStr = act.tanggal; 
+                if (!acc[dateStr]) acc[dateStr] = []; 
+                acc[dateStr].push(act.kegiatan); 
+                return acc; 
+            }, {}); 
         }
-        function populatePjFilter() {
-            const pjs = [...new Set(activityData.map(item => item.pj))];
-            pjs.sort();
-            pjFilter.innerHTML = '<option value="all">Tampilkan Semua Departemen</option>';
-            pjs.forEach(pj => {
+
+        function populatePjFilter() { 
+            const pjs = [...new Set(activityData.map(item => item.pj))]; 
+            pjs.sort(); 
+            const currentSelectedValue = pjFilter.value;
+            pjFilter.innerHTML = '<option value="all">Tampilkan Semua Departemen</option>'; 
+            pjs.forEach(pj => { 
                 const option = document.createElement('option');
                 option.value = pj;
                 option.textContent = pj;
                 pjFilter.appendChild(option);
-            });
+            }); 
+            pjFilter.value = currentSelectedValue;
         }
-        function updatePjDatalist() {
-            pjDatalist.innerHTML = '';
-             const pjs = [...new Set(activityData.map(item => item.pj))];
-            pjs.forEach(pj => {
+
+        function updatePjDatalist() { 
+            const pjs = [...new Set(activityData.map(item => item.pj))]; 
+            pjDatalist.innerHTML = ''; 
+            pjs.forEach(pj => { 
                 const option = document.createElement('option');
                 option.value = pj;
                 pjDatalist.appendChild(option);
-            });
+            }); 
         }
+
         function renderActivityList(data) {
             activityListContainer.innerHTML = '';
-            if (data.length === 0) {
-                activityListContainer.innerHTML = `<p class="text-zinc-500">Tidak ada kegiatan.</p>`;
+            if (!data || data.length === 0) {
+                activityListContainer.innerHTML = `<p class="text-zinc-500">Tidak ada kegiatan yang sesuai.</p>`;
                 return;
             }
             const grouped = data.reduce((acc, act) => {
@@ -389,99 +352,190 @@
                 const monthContainer = document.createElement('div');
                 monthContainer.innerHTML = `<h3 class="text-lg font-semibold text-amber-600 mb-3">${monthYear}</h3>`;
                 grouped[monthYear].forEach(activity => {
-                    const date = new Date(activity.tanggal);
                     const el = document.createElement('div');
                     el.className = 'flex items-start gap-4 group';
                     el.innerHTML = `
                         <div class="flex-shrink-0 w-12 h-12 flex flex-col items-center justify-center bg-zinc-100 rounded-lg">
-                            <span class="text-sm font-bold text-zinc-700">${date.toLocaleString('id-ID', { month: 'short' })}</span>
-                            <span class="text-xl font-bold text-zinc-900">${date.getDate()}</span>
+                            <span class="text-sm font-bold text-zinc-700">${new Date(activity.tanggal).toLocaleString('id-ID', { month: 'short' })}</span>
+                            <span class="text-xl font-bold text-zinc-900">${new Date(activity.tanggal).getDate()}</span>
                         </div>
                         <div class="flex-grow pt-1">
                             <p class="font-semibold text-zinc-800">${activity.kegiatan}</p>
-                            <p class="text-sm text-zinc-500 font-medium">${activity.pj}</p>
-                            <p class="text-sm text-zinc-600 mt-1">${activity.deskripsi || ''}</p>
+                            <p class="text-sm text-zinc-600 italic mt-1">${activity.deskripsi || ''}</p>
+                            <p class="text-sm text-zinc-500 mt-2">PJ: ${activity.pj}</p>
                         </div>
                         <div class="flex-shrink-0 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button data-id="${activity.id}" class="edit-btn p-1 text-blue-600 hover:text-blue-800" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
                             <button data-id="${activity.id}" class="delete-btn p-1 text-red-600 hover:text-red-800" title="Hapus"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
-                        </div>
-                    `;
+                        </div>`;
                     monthContainer.appendChild(el);
                 });
                 activityListContainer.appendChild(monthContainer);
             }
         }
-        function renderCalendar() {
-            calendarGrid.innerHTML = '';
-            const y = currentDate.getFullYear(), m = currentDate.getMonth();
-            currentMonthYearEl.textContent = currentDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
-            ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].forEach(d => calendarGrid.innerHTML += `<div class="font-semibold text-sm text-zinc-500">${d}</div>`);
-            const firstDay = new Date(y, m, 1).getDay();
-            const daysInMonth = new Date(y, m + 1, 0).getDate();
-            const today = new Date();
-            for (let i = 0; i < firstDay; i++) calendarGrid.appendChild(document.createElement('div'));
-            for (let day = 1; day <= daysInMonth; day++) {
-                const el = document.createElement('div');
-                const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                el.className = "calendar-day h-10 flex items-center justify-center";
-                el.innerHTML = `<span class="w-8 h-8 flex items-center justify-center">${day}</span>`;
-                if (y === today.getFullYear() && m === today.getMonth() && day === today.getDate()) el.querySelector('span').classList.add('today');
-                if (eventsByDate[dateStr]) {
-                    el.classList.add('has-event');
-                    el.innerHTML += '<div class="event-dot"></div>';
-                    el.title = eventsByDate[dateStr].join('\n');
-                    el.dataset.date = dateStr;
+
+        function renderCalendar(){
+            calendarGrid.innerHTML="";
+            const year=currentDate.getFullYear();
+            const month=currentDate.getMonth();
+            currentMonthYearEl.textContent=currentDate.toLocaleString("id-ID",{month:"long",year:"numeric"});
+            ["Min","Sen","Sel","Rab","Kam","Jum","Sab"].forEach(day=>{
+                const dayEl=document.createElement("div");
+                dayEl.className="font-semibold text-sm text-zinc-500";
+                dayEl.textContent=day;
+                calendarGrid.appendChild(dayEl)
+            });
+            const firstDayOfMonth=new Date(year,month,1).getDay();
+            const daysInMonth=new Date(year,month+1,0).getDate();
+            const today=new Date;
+            for(let i=0;i<firstDayOfMonth;i++)calendarGrid.appendChild(document.createElement("div"));
+            for(let day=1;day<=daysInMonth;day++){
+                const dayEl=document.createElement("div");
+                const dateStr=year+"-"+String(month+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+                dayEl.className="calendar-day h-10 flex items-center justify-center";
+                const daySpan=document.createElement("span");
+                daySpan.className="w-8 h-8 flex items-center justify-center";
+                daySpan.textContent=day;
+                dayEl.appendChild(daySpan);
+                if(year===today.getFullYear()&&month===today.getMonth()&&day===today.getDate())daySpan.classList.add("today");
+                if(eventsByDate[dateStr]){
+                    dayEl.classList.add("has-event");
+                    dayEl.title=eventsByDate[dateStr].join("\n");
+                    dayEl.dataset.date=dateStr;
+                    dayEl.innerHTML+='<div class="event-dot"></div>'
                 }
-                calendarGrid.appendChild(el);
+                calendarGrid.appendChild(dayEl)
             }
         }
 
-        // --- CHART FUNCTIONS ---
-        function createPjChart(data) { /* ... (no changes) ... */ }
-        function createMonthChart(data) { /* ... (no changes) ... */ }
-        function createPjChart(data){const ctx=document.getElementById("pjChart").getContext("2d");if(pjChartInstance)pjChartInstance.destroy();const t=data.reduce((t,e)=>(t[e.pj]=(t[e.pj]||0)+1,t),{}),e=Object.entries(t).sort((t,e)=>e[1]-t[1]),n=e.map(t=>t[0]),a=e.map(t=>t[1]);pjChartInstance=new Chart(ctx,{type:"bar",data:{labels:n,datasets:[{label:"Jumlah Kegiatan",data:a,backgroundColor:"rgba(217, 119, 6, 0.7)"}]},options:{indexAxis:"y",responsive:!0,maintainAspectRatio:!1,onClick:(t,e)=>{if(e.length>0){const a=n[e[0].index];currentFilter={type:"pj",value:a},resetFilterBtn.classList.remove("hidden"),rerenderDashboard()}}}})}
-        function createMonthChart(data){const ctx=document.getElementById("monthChart").getContext("2d");if(monthChartInstance)monthChartInstance.destroy();const t=["Mei 2025","Juni 2025","Juli 2025","Agustus 2025","September 2025","Oktober 2025","November 2025","Desember 2025","Januari 2026","Februari 2026","Maret 2026"],e=data.reduce((t,e)=>{const n=new Date(e.tanggal).toLocaleString("id-ID",{month:"long",year:"numeric"});return t[n]=(t[n]||0)+1,t},{}),n=t.map(t=>e[t]||0);monthChartInstance=new Chart(ctx,{type:"bar",data:{labels:t,datasets:[{label:"Jumlah Kegiatan",data:n,backgroundColor:"rgba(120, 113, 108, 0.7)"}]},options:{responsive:!0,maintainAspectRatio:!1}})}
+        function createPjChart(data){
+            const ctx=document.getElementById("pjChart").getContext("2d");
+            if(pjChartInstance)pjChartInstance.destroy();
+            const pjCounts=data.reduce((acc,activity)=>(acc[activity.pj]=(acc[activity.pj]||0)+1,acc),{});
+            const sortedPjs=Object.entries(pjCounts).sort((a,b)=>b[1]-a[1]);
+            const labels=sortedPjs.map(entry=>entry[0]);
+            const values=sortedPjs.map(entry=>entry[1]);
+            pjChartInstance=new Chart(ctx,{
+                type:"bar",
+                data:{
+                    labels:labels,
+                    datasets:[{label:"Jumlah Kegiatan",data:values,backgroundColor:"rgba(217, 119, 6, 0.7)"}]
+                },
+                options:{
+                    indexAxis:"y",
+                    responsive:true,
+                    maintainAspectRatio:false,
+                    scales:{
+                        x:{beginAtZero:true,ticks:{stepSize:1}},
+                        y:{ticks:{autoSkip:false,callback:function(value){const label=this.getLabelForValue(value);return label.length>30?label.substring(0,30)+"...":label}}}
+                    },
+                    plugins:{
+                        legend:{display:false},
+                        tooltip:{callbacks:{title:function(context){return context[0].label}}}
+                    },
+                    onClick:(event,elements)=>{
+                        if(elements.length>0){
+                            const clickedPj=labels[elements[0].index];
+                            currentFilter={type:"pj",value:clickedPj};
+                            resetFilterBtn.classList.remove("hidden");
+                            rerenderDashboard()
+                        }
+                    }
+                }
+            })
+        }
 
-        // --- MODAL FUNCTIONS ---
-        function openActivityModal(id = null) {
+        function createMonthChart(data){
+            const ctx=document.getElementById("monthChart").getContext("2d");
+            if(monthChartInstance)monthChartInstance.destroy();
+            const monthOrder=["Mei 2025","Juni 2025","Juli 2025","Agustus 2025","September 2025","Oktober 2025","November 2025","Desember 2025","Januari 2026","Februari 2026","Maret 2026"];
+            const monthCounts=data.reduce((acc,act)=>{
+                const my=new Date(act.tanggal).toLocaleString("id-ID",{month:"long",year:"numeric"});
+                acc[my]=(acc[my]||0)+1;
+                return acc
+            },{});
+            const values=monthOrder.map(month=>monthCounts[month]||0);
+            monthChartInstance=new Chart(ctx,{
+                type:"bar",
+                data:{
+                    labels:monthOrder,
+                    datasets:[{label:"Jumlah Kegiatan",data:values,backgroundColor:"rgba(120, 113, 108, 0.7)"}]
+                },
+                options:{
+                    responsive:true,
+                    maintainAspectRatio:false,
+                    scales:{y:{beginAtZero:true,ticks:{stepSize:1}}},
+                    plugins:{legend:{display:false}}
+                }
+            })
+        }
+       
+        // --- FUNGSI MODAL & CRUD ---
+        function openModal(activityId = null) {
             activityForm.reset();
-            deskripsiInput.value = '';
-            if (id) {
-                const activity = activityData.find(a => a.id === id);
-                modalTitle.textContent = 'Edit Kegiatan';
-                activityIdInput.value = activity.id;
-                kegiatanInput.value = activity.kegiatan;
-                deskripsiInput.value = activity.deskripsi || '';
-                tanggalInput.value = activity.tanggal;
-                pjInput.value = activity.pj;
+            if (activityId) {
+                const activity = activityData.find(a => a.id === activityId);
+                if(activity) {
+                    modalTitle.textContent = 'Edit Kegiatan';
+                    activityIdInput.value = activity.id;
+                    kegiatanInput.value = activity.kegiatan;
+                    deskripsiInput.value = activity.deskripsi || '';
+                    tanggalInput.value = activity.tanggal;
+                    pjInput.value = activity.pj;
+                }
             } else {
                 modalTitle.textContent = 'Tambah Kegiatan Baru';
                 activityIdInput.value = '';
             }
-            activityModal.classList.remove('hidden');
+            modal.classList.remove('hidden');
         }
-        function closeActivityModal() { activityModal.classList.add('hidden'); }
-        function saveActivity(event) {
+        function closeModal() { modal.classList.add('hidden'); }
+
+        async function saveActivity(event) {
             event.preventDefault();
-            const id = parseInt(activityIdInput.value);
+            const id = activityIdInput.value;
             const data = {
                 kegiatan: kegiatanInput.value.trim(),
                 deskripsi: deskripsiInput.value.trim(),
                 tanggal: tanggalInput.value,
                 pj: pjInput.value.trim()
             };
-            if (id) {
-                const index = activityData.findIndex(a => a.id === id);
-                activityData[index] = { ...activityData[index], ...data };
-            } else {
-                data.id = Date.now();
-                activityData.push(data);
+            
+            loadingOverlay.classList.remove('hidden');
+            try {
+                if (id) { // Edit
+                    const docRef = doc(activityCollectionRef, id);
+                    await updateDoc(docRef, data);
+                } else { // Tambah
+                    await addDoc(activityCollectionRef, data);
+                }
+            } catch (error) {
+                console.error("Error saving document: ", error);
+                alert("Gagal menyimpan data. Silakan coba lagi.");
+            } finally {
+                closeModal();
+                // Rerender akan otomatis dipicu oleh onSnapshot
+                // Tidak perlu memanggil rerenderDashboard() secara manual
+                // Cukup sembunyikan loading setelah beberapa saat
+                setTimeout(() => loadingOverlay.classList.add('hidden'), 500);
             }
-            closeActivityModal();
-            rerenderDashboard();
         }
 
+        async function deleteActivity(id) {
+            // Menggunakan custom modal untuk konfirmasi
+            if (confirm('Apakah Anda yakin ingin menghapus kegiatan ini?')) {
+                loadingOverlay.classList.remove('hidden');
+                try {
+                    await deleteDoc(doc(activityCollectionRef, id));
+                } catch (error) {
+                    console.error("Error deleting document: ", error);
+                    alert("Gagal menghapus data. Silakan coba lagi.");
+                } finally {
+                     setTimeout(() => loadingOverlay.classList.add('hidden'), 500);
+                }
+            }
+        }
+        
         // --- EVENT LISTENERS ---
         function setupEventListeners() {
             pjFilter.addEventListener('change', () => {
@@ -504,74 +558,55 @@
                 resetFilterBtn.classList.add('hidden');
                 rerenderDashboard();
             });
-            // Modals
-            addActivityBtn.addEventListener('click', () => openActivityModal());
-            cancelBtn.addEventListener('click', closeActivityModal);
+            addActivityBtn.addEventListener('click', () => openModal());
+            cancelBtn.addEventListener('click', closeModal);
             activityForm.addEventListener('submit', saveActivity);
             activityListContainer.addEventListener('click', (e) => {
                 const editBtn = e.target.closest('.edit-btn');
-                if (editBtn) openActivityModal(parseInt(editBtn.dataset.id));
+                if (editBtn) openModal(editBtn.dataset.id);
                 const deleteBtn = e.target.closest('.delete-btn');
-                if (deleteBtn && confirm('Yakin ingin menghapus kegiatan ini?')) {
-                    activityData = activityData.filter(a => a.id !== parseInt(deleteBtn.dataset.id));
-                    rerenderDashboard();
+                if (deleteBtn) deleteActivity(deleteBtn.dataset.id);
+            });
+        }
+
+        /**
+         * Mengisi database dengan data awal jika kosong.
+         */
+        async function seedInitialData() {
+            loadingOverlay.classList.remove('hidden');
+            const initialData = [ { kegiatan: "Monev", tanggal: "2025-05-05", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "Evaluasi program kerja bulanan." }, { kegiatan: "Rutinan Tahlil", tanggal: "2025-05-05", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "Pembacaan tahlil bersama." }, { kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2025-05-05", pj: "LEMBAGA CBP DAN KPP", deskripsi: "Apel dan koordinasi awal bulan." }, { kegiatan: "Monev", tanggal: "2025-06-02", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "Evaluasi program kerja bulanan." }, { kegiatan: "Budaya (Pelatihan hadrah/banjari)", tanggal: "2025-06-02", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "Latihan rutin tim hadrah." }, { kegiatan: "Olahraga (bulu tangkis dan futsal)", tanggal: "2025-06-02", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "Kegiatan olahraga mingguan." }, { kegiatan: "Keilmuan (pelatihan MC, tilawah, kaligrafi dan kepenulisan)", tanggal: "2025-06-02", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "Pengembangan bakat dan minat." }, { kegiatan: "Rutinan Tahlil", tanggal: "2025-06-02", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "Pembacaan tahlil bersama." }, { kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2025-06-02", pj: "LEMBAGA CBP DAN KPP", deskripsi: "Apel dan koordinasi awal bulan." }, { kegiatan: "Monev", tanggal: "2025-07-07", pj: "Departemen Organisasi dan Departemen Pengembangan Organisasi", deskripsi: "Evaluasi program kerja bulanan." }, { kegiatan: "Budaya (Pelatihan hadrah/banjari)", tanggal: "2025-07-07", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "Latihan rutin tim hadrah." }, { kegiatan: "Olahraga (bulu tangkis dan futsal)", tanggal: "2025-07-07", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "Kegiatan olahraga mingguan." }, { kegiatan: "Keilmuan (pelatihan MC, tilawah, kaligrafi dan kepenulisan)", tanggal: "2025-07-07", pj: "Lembaga Budaya dan Olahraga dan Departemen Hubungan Eksternal", deskripsi: "Pengembangan bakat dan minat." }, { kegiatan: "Rutinan Tahlil", tanggal: "2025-07-07", pj: "DPEARTEMEN Dakwah dan Departemen Hubungan Eksternal", deskripsi: "Pembacaan tahlil bersama." }, { kegiatan: "APEL SAPA AWAL BULAN", tanggal: "2025-07-07", pj: "LEMBAGA CBP DAN KPP", deskripsi: "Apel dan koordinasi awal bulan." } ];
+            try {
+                for (const item of initialData) {
+                    await addDoc(activityCollectionRef, item);
                 }
-            });
-            // Gemini Features Listeners
-            generateDescBtn.addEventListener('click', handleGenerateDescription);
-            summarizeMonthBtn.addEventListener('click', handleSummarizeMonth);
-            closeSummaryBtn.addEventListener('click', () => summaryModal.classList.add('hidden'));
-            copySummaryBtn.addEventListener('click', () => {
-                navigator.clipboard.writeText(summaryContent.innerText);
-                copySummaryBtn.textContent = 'Tersalin!';
-                setTimeout(() => { copySummaryBtn.textContent = 'Salin'; }, 2000);
-            });
-        }
-
-        // --- GEMINI EVENT HANDLERS ---
-        async function handleGenerateDescription() {
-            const activityName = kegiatanInput.value;
-            if (!activityName.trim()) {
-                alert("Harap isi Nama Kegiatan terlebih dahulu.");
-                return;
+            } catch (error) {
+                console.error("Error seeding data: ", error);
             }
-            descLoader.classList.remove('hidden');
-            generateDescBtn.disabled = true;
-            const prompt = `Buatkan deskripsi singkat dan menarik (sekitar 2-3 kalimat) untuk sebuah kegiatan organisasi mahasiswa bernama "${activityName}". Deskripsi harus informatif dan engaging, cocok untuk diumumkan.`;
-            const result = await callGemini(prompt);
-            deskripsiInput.value = result;
-            descLoader.classList.add('hidden');
-            generateDescBtn.disabled = false;
         }
-        async function handleSummarizeMonth() {
-            const monthName = currentMonthYearEl.textContent;
-            const activitiesInMonth = activityData.filter(act => {
-                const actMonth = new Date(act.tanggal).toLocaleString('id-ID', { month: 'long', year: 'numeric' });
-                return actMonth === monthName;
-            });
-
-            summaryModal.classList.remove('hidden');
-            copySummaryBtn.classList.add('hidden');
-            summaryContent.innerHTML = '<div class="flex justify-center items-center"><div class="loading-spinner"></div></div>';
-
-            if (activitiesInMonth.length === 0) {
-                summaryContent.innerHTML = `<p>Tidak ada kegiatan yang dijadwalkan untuk bulan ${monthName}.</p>`;
-                return;
-            }
-
-            const activityListText = activitiesInMonth.map(a => `- ${a.kegiatan} (PJ: ${a.pj})`).join('\n');
-            const prompt = `Berikut adalah daftar kegiatan untuk bulan ${monthName}:\n${activityListText}\n\nBuatkan sebuah rangkuman singkat dalam 2-3 paragraf yang menyoroti kegiatan-kegiatan utama dan semangat umum di bulan ini. Nada tulisan harus informatif dan membangkitkan semangat, cocok untuk buletin internal atau pengumuman.`;
-
-            const result = await callGemini(prompt);
-            summaryContent.innerHTML = result.replace(/\n/g, '<br>'); // Simple formatting
-            copySummaryBtn.classList.remove('hidden');
-            copySummaryBtn.textContent = 'Salin';
-        }
-
-        // --- INITIALIZATION ---
+        
+        // --- INISIALISASI APLIKASI ---
         setupEventListeners();
-        rerenderDashboard();
-    });
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // User sudah login
+                main(user);
+            } else {
+                // User belum login, coba login dengan token atau secara anonim
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    // onAuthStateChanged akan dipanggil lagi setelah login berhasil
+                } catch (error) {
+                    console.error("Authentication error:", error);
+                    loadingOverlay.innerHTML = "Gagal melakukan autentikasi. Silakan refresh halaman.";
+                }
+            }
+        });
+
     </script>
 </body>
 </html>
+
