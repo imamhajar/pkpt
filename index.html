@@ -204,7 +204,14 @@
 
         // --- KONFIGURASI FIREBASE ---
         // Variabel ini akan disediakan oleh lingkungan Canvas
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const firebaseConfig = {
+        apiKey: "AIzaSyCO_38Kj5mTw7zyU4eExxDuVb2gokHpn4M",
+        authDomain: "kalenderprokerpkpt.firebaseapp.com",
+        projectId: "kalenderprokerpkpt",
+        storageBucket: "kalenderprokerpkpt.firebasestorage.app",
+        messagingSenderId: "608895898849",
+        appId: "1:608895898849:web:3d504b8c1061ac51c253a0"
+        };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
         // Inisialisasi Firebase
